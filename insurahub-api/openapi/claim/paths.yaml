@@ -123,6 +123,39 @@ claims:
       '500':
         $ref: '../common/responses.yaml#/InternalServerError'
 
+claimApprove:
+  post:
+    tags:
+      - Claims
+    summary: Approve a pending claim
+    description: >
+      Approves a claim that is currently pending. Only administrators can perform this operation.
+      Claims that are not in a pending state cannot be approved.
+    operationId: approveClaim
+    parameters:
+      - name: claimId
+        in: path
+        required: true
+        description: Claim ID.
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '204':
+        description: Claim approved successfully.
+      '401':
+        $ref: '../common/responses.yaml#/Unauthorized'
+      '403':
+        $ref: '../common/responses.yaml#/Forbidden'
+      '404':
+        $ref: '../common/responses.yaml#/NotFound'
+      '409':
+        $ref: '../common/responses.yaml#/Conflict'
+      '422':
+        $ref: '../common/responses.yaml#/UnprocessableEntity'
+      '500':
+        $ref: '../common/responses.yaml#/InternalServerError'
+
 receiptByClaimId:
   get:
     tags:
@@ -162,3 +195,38 @@ receiptByClaimId:
         $ref: '../common/responses.yaml#/NotFound'
       '500':
         $ref: '../common/responses.yaml#/InternalServerError'
+
+claimById:
+  put:
+    tags:
+      - Claims
+    summary: Update a pending claim
+    description: Updates the date of service, plan, and amount of a pending claim. The plan must be one the consumer is enrolled in.
+    operationId: putClaim
+    parameters:
+      - name: claimId
+        in: path
+        required: true
+        description: Claim ID.
+        schema:
+          type: string
+          format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: './schemas.yaml#/UpdateClaimRequest'
+    responses:
+      '204':
+        description: Updated claim
+      '400':
+        $ref: '../common/responses.yaml#/BadRequest'
+      '403':
+        $ref: '../common/responses.yaml#/Forbidden'
+      '404':
+        $ref: '../common/responses.yaml#/NotFound'
+      '422':
+        $ref: '../common/responses.yaml#/UnprocessableEntity'
+      '409':
+        $ref: '../common/responses.yaml#/Conflict'

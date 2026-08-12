@@ -2,6 +2,9 @@ package com.cspot.insurahub.claim.service;
 
 import com.cspot.insurahub.claim.entity.Claim;
 import com.cspot.insurahub.claim.entity.Receipt;
+import com.cspot.insurahub.claim.enumeration.ClaimStatus;
+import com.cspot.insurahub.claim.exception.ClaimNotPendingException;
+import com.cspot.insurahub.claim.exception.ClaimUpdateNotAllowedException;
 import com.cspot.insurahub.claim.filter.ClaimSpecification;
 import com.cspot.insurahub.claim.mapper.ClaimMapper;
 import com.cspot.insurahub.claim.repository.ClaimRepository;
@@ -14,6 +17,7 @@ import com.cspot.insurahub.enrollment.repository.EnrollmentRepository;
 import com.cspot.insurahub.model.ClaimResponse;
 import com.cspot.insurahub.model.PostClaimRequest;
 import com.cspot.insurahub.model.PostResponse;
+import com.cspot.insurahub.model.UpdateClaimRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.InputStreamResource;
@@ -114,9 +118,43 @@ public class ClaimService {
         return new InputStreamResource(new ByteArrayInputStream(receipt.getContent()));
     }
 
+    @Transactional
+    public void approveClaim(UUID claimId) {
+        Claim claim = claimRepository.findByIdOrThrow(claimId);
+
+        if (claim.getStatus() != ClaimStatus.PENDING) {
+            throw new ClaimNotPendingException(
+                    "Claim with id '" + claimId + "' cannot be approved because it is not pending. "
+                            + "Current status: " + claim.getStatus()
+            );
+        }
+
+        claim.setStatus(ClaimStatus.APPROVED);
+        log.info("Claim approved: id={}", claimId);
+    }
+
     private boolean hasAuthority(String authority) {
         return SecurityContextHolder.getContext().getAuthentication() != null
                 && SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
                 .anyMatch(grantedAuthority -> authority.equals(grantedAuthority.getAuthority()));
+    }
+
+    @Transactional
+    public void updateClaim(UUID claimId, UpdateClaimRequest request) {
+        Claim claim = claimRepository.findByIdOrThrow(claimId);
+        if (claim.getStatus() != ClaimStatus.PENDING) {
+            throw new ClaimUpdateNotAllowedException("Only pending claims can be updated");
+        }
+
+        claimMapper.updateFromUpdateRequest(claim, request);
+        Enrollment currentEnrollment = claim.getEnrollment();
+        if (!currentEnrollment.getPlan().getId().equals(request.getPlanId())) {
+            Enrollment targetEnrollment = enrollmentRepository
+                    .findByConsumerIdAndPlanId(currentEnrollment.getConsumer().getId(), request.getPlanId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Enrollment not found for consumer and plan: " + request.getPlanId()));
+            claim.setEnrollment(targetEnrollment);
+        }
+        claimRepository.save(claim);
     }
 }

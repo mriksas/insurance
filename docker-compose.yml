@@ -19,6 +19,21 @@ services:
       timeout: 5s
       retries: 5
 
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: mailpit
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    networks:
+      - insurahub-network
+    healthcheck:
+      test: [ "CMD", "wget", "--spider", "-q", "http://localhost:8025/" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   app:
     build: .
     container_name: insurahub-app
@@ -37,8 +52,17 @@ services:
       AUTH0_CONNECTION_NAME: ${AUTH0_CONNECTION_NAME}
       AUTH0_CONSUMER_ROLE: ${AUTH0_CONSUMER_ROLE}
       AUTH0_ADMIN_ROLE: ${AUTH0_ADMIN_ROLE}
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+      MAIL_USERNAME:
+      MAIL_PASSWORD:
+      MAIL_SENDER: ${MAIL_SENDER}
+      MAIL_STARTTLS_ENABLED: false
+      MAIL_STARTTLS_REQUIRED: false
     depends_on:
       postgres:
+        condition: service_healthy
+      mailpit:
         condition: service_healthy
     networks:
       - insurahub-network

@@ -32,6 +32,9 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import static com.cspot.insurahub.plan.testdata.PlanTestData.createValidDentalBasicInsurancePlan;
+import static com.cspot.insurahub.plan.testdata.PlanTestData.createValidStandardHealthInsurancePlan;
+import static com.cspot.insurahub.plan.testdata.PlanTestData.createValidPlanRequestBody;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasItems;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
@@ -77,7 +80,7 @@ class PlanIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(post(PACKAGES_ENDPOINT + "/" + insurancePackage.getId() + "/plans")
                         .with(jwtWithPermissions("update:packages"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(createPlanRequestBody(
+                        .content(createValidPlanRequestBody(
                                 "Standard Health",
                                 "HEALTH_INSURANCE",
                                 250,
@@ -100,7 +103,7 @@ class PlanIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(post(PACKAGES_ENDPOINT + "/" + insurancePackage.getId() + "/plans")
                         .with(jwtWithPermissions("update:packages"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(createPlanRequestBody(
+                        .content(createValidPlanRequestBody(
                                 "Vision Plus",
                                 "VISION_INSURANCE",
                                 120,
@@ -121,7 +124,7 @@ class PlanIntegrationTest extends BaseIntegrationTest {
 
         mockMvc.perform(post(PACKAGES_ENDPOINT + "/" + insurancePackage.getId() + "/plans")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(createPlanRequestBody(
+                        .content(createValidPlanRequestBody(
                                 "Standard Health",
                                 "HEALTH_INSURANCE",
                                 250,
@@ -143,7 +146,7 @@ class PlanIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(post(PACKAGES_ENDPOINT + "/" + insurancePackage.getId() + "/plans")
                         .with(jwtWithoutPermissions())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(createPlanRequestBody(
+                        .content(createValidPlanRequestBody(
                                 "Standard Health",
                                 "HEALTH_INSURANCE",
                                 250,
@@ -164,7 +167,7 @@ class PlanIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(post(PACKAGES_ENDPOINT + "/" + packageId + "/plans")
                         .with(jwtWithPermissions("update:packages"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(createPlanRequestBody(
+                        .content(createValidPlanRequestBody(
                                 "Standard Health",
                                 "HEALTH_INSURANCE",
                                 250,
@@ -182,7 +185,7 @@ class PlanIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(put(PLANS_ENDPOINT + "/" + plan.getId())
                         .with(jwtWithPermissions("update:plans"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(createPlanRequestBody(
+                        .content(createValidPlanRequestBody(
                                 "Updated Dental",
                                 "DENTAL_INSURANCE",
                                 300,
@@ -208,7 +211,7 @@ class PlanIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(put(PLANS_ENDPOINT + "/" + planId)
                         .with(jwtWithPermissions("update:plans"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(createPlanRequestBody(
+                        .content(createValidPlanRequestBody(
                                 "Updated Dental",
                                 "DENTAL_INSURANCE",
                                 300,
@@ -226,7 +229,7 @@ class PlanIntegrationTest extends BaseIntegrationTest {
 
         mockMvc.perform(put(PLANS_ENDPOINT + "/" + plan.getId())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(createPlanRequestBody(
+                        .content(createValidPlanRequestBody(
                                 "Updated Dental",
                                 "DENTAL_INSURANCE",
                                 300,
@@ -246,7 +249,7 @@ class PlanIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(put(PLANS_ENDPOINT + "/" + plan.getId())
                         .with(jwtWithoutPermissions())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(createPlanRequestBody(
+                        .content(createValidPlanRequestBody(
                                 "Updated Dental",
                                 "DENTAL_INSURANCE",
                                 300,
@@ -269,7 +272,7 @@ class PlanIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(put(PLANS_ENDPOINT + "/" + plan.getId())
                         .with(jwtWithPermissions("update:plans"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(createPlanRequestBody(
+                        .content(createValidPlanRequestBody(
                                 "Updated Dental",
                                 "DENTAL_INSURANCE",
                                 300,
@@ -311,7 +314,7 @@ class PlanIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(post(PACKAGES_ENDPOINT + "/" + insurancePackage.getId() + "/plans")
                         .with(jwtWithPermissions("update:packages"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(createPlanRequestBody(
+                        .content(createValidPlanRequestBody(
                                 "Standard Health",
                                 "HEALTH_INSURANCE",
                                 contribution,
@@ -332,7 +335,7 @@ class PlanIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(post(PACKAGES_ENDPOINT + "/" + insurancePackage.getId() + "/plans")
                         .with(jwtWithPermissions("update:packages"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(createPlanRequestBody(
+                        .content(createValidPlanRequestBody(
                                 "Plan!",
                                 "HEALTH_INSURANCE",
                                 250,
@@ -349,20 +352,8 @@ class PlanIntegrationTest extends BaseIntegrationTest {
     void shouldGetPlansOfPackage() throws Exception {
         InsurancePackage insurancePackage = savePackage();
         planRepository.saveAll(List.of(
-                new InsurancePlan(
-                        insurancePackage,
-                        "Standard Health",
-                        PlanType.HEALTH_INSURANCE,
-                        BigDecimal.valueOf(250),
-                        BigDecimal.valueOf(500)
-                ),
-                new InsurancePlan(
-                        insurancePackage,
-                        "Dental Basic",
-                        PlanType.DENTAL_INSURANCE,
-                        BigDecimal.valueOf(100),
-                        BigDecimal.valueOf(300)
-                )
+                createValidStandardHealthInsurancePlan(insurancePackage),
+                createValidDentalBasicInsurancePlan(insurancePackage)
         ));
 
         mockMvc.perform(get(PACKAGES_ENDPOINT + "/" + insurancePackage.getId() + "/plans")
@@ -418,22 +409,6 @@ class PlanIntegrationTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.status").value(404));
     }
 
-    private String createPlanRequestBody(
-            String name,
-            String type,
-            int contribution,
-            int election
-    ) {
-        return """
-                {
-                  "name": "%s",
-                  "type": "%s",
-                  "contribution": %d,
-                  "election": %d
-                }
-                """.formatted(name, type, contribution, election);
-    }
-
     private InsurancePackage savePackage() {
         LocalDate startDate = LocalDate.now(clock).plusDays(1);
 
@@ -446,13 +421,7 @@ class PlanIntegrationTest extends BaseIntegrationTest {
     }
 
     private InsurancePlan savePlan(InsurancePackage insurancePackage) {
-        return planRepository.save(new InsurancePlan(
-                insurancePackage,
-                "Standard Health",
-                PlanType.HEALTH_INSURANCE,
-                BigDecimal.valueOf(250),
-                BigDecimal.valueOf(500)
-        ));
+        return planRepository.save(createValidStandardHealthInsurancePlan(insurancePackage));
     }
 
     private void assertPlanUnchanged(InsurancePlan plan) {

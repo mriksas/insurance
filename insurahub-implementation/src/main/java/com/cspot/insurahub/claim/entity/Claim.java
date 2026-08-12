@@ -15,6 +15,7 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -26,13 +27,16 @@ import java.time.LocalDate;
 public class Claim extends SoftDeletableAuditableEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "enrollment_id", nullable = false, updatable = false)
+    @JoinColumn(name = "enrollment_id", nullable = false)
+    @Setter
     private Enrollment enrollment;
 
     @OneToOne(mappedBy = "claim", fetch = FetchType.LAZY)
+    @Setter(AccessLevel.PACKAGE)
     private Receipt receipt;
 
     @Column(name = "service_date", nullable = false)
+    @Setter
     private LocalDate serviceDate;
 
     @Column(
@@ -43,13 +47,16 @@ public class Claim extends SoftDeletableAuditableEntity {
             insertable = false,
             updatable = false
     )
+    @Setter
     private String claimNumber;
 
     @Column(name = "amount", nullable = false, precision = 12, scale = 2)
+    @Setter
     private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 32)
+    @Setter
     private ClaimStatus status;
 
     public Claim(
@@ -67,7 +74,4 @@ public class Claim extends SoftDeletableAuditableEntity {
         }
     }
 
-    void setReceipt(Receipt receipt) {
-        this.receipt = receipt;
-    }
 }

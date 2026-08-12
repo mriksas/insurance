@@ -1,0 +1,27 @@
+name: PR title
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  validate-pr-title:
+    name: Validate PR title
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check PR title format
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          TITLE_REGEX='^SCRUM-[0-9]+: [A-Z][a-z]+ .+'
+
+          if [[ ! "$PR_TITLE" =~ $TITLE_REGEX ]]; then
+            echo "PR title must match: SCRUM-123: Verb short description"
+            echo "Example: SCRUM-38: Add package search"
+            echo "Current: $PR_TITLE"
+            exit 1
+          fi

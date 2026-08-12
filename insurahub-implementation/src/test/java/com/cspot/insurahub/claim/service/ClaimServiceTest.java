@@ -3,22 +3,18 @@ package com.cspot.insurahub.claim.service;
 import com.cspot.insurahub.claim.entity.Claim;
 import com.cspot.insurahub.claim.entity.Receipt;
 import com.cspot.insurahub.claim.enumeration.ClaimStatus;
+import com.cspot.insurahub.claim.exception.ClaimNotPendingException;
 import com.cspot.insurahub.claim.mapper.ClaimMapper;
 import com.cspot.insurahub.claim.repository.ClaimRepository;
 import com.cspot.insurahub.claim.repository.ReceiptRepository;
 import com.cspot.insurahub.claim.storage.PostgresReceiptStorage;
 import com.cspot.insurahub.common.exception.ResourceNotFoundException;
-import com.cspot.insurahub.consumer.entity.Consumer;
 import com.cspot.insurahub.consumer.service.IdpIdMappingService;
 import com.cspot.insurahub.enrollment.entity.Enrollment;
 import com.cspot.insurahub.enrollment.repository.EnrollmentRepository;
-import com.cspot.insurahub.insurancepackage.entity.InsurancePackage;
 import com.cspot.insurahub.model.ClaimResponse;
-import com.cspot.insurahub.model.PlanType;
 import com.cspot.insurahub.model.PostClaimRequest;
 import com.cspot.insurahub.model.PostResponse;
-import com.cspot.insurahub.payroll.Payroll;
-import com.cspot.insurahub.plan.entity.InsurancePlan;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,12 +36,15 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static com.cspot.insurahub.claim.testdata.ClaimTestData.createValidClaim;
+import static com.cspot.insurahub.claim.testdata.ClaimTestData.createValidClaimForListResponse;
+import static com.cspot.insurahub.claim.testdata.ClaimTestData.createValidClaimResponse;
+import static com.cspot.insurahub.claim.testdata.ClaimTestData.createValidPostClaimRequest;
+import static com.cspot.insurahub.enrollment.testdata.EnrollmentTestData.createValidEnrollmentWithId;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -92,9 +91,9 @@ class ClaimServiceTest {
     @Test
     void shouldCreateClaim() {
         UUID enrollmentId = UUID.randomUUID();
-        Enrollment enrollment = enrollment(enrollmentId);
+        Enrollment enrollment = createValidEnrollmentWithId(enrollmentId);
 
-        PostClaimRequest request = claimRequest(enrollmentId);
+        PostClaimRequest request = createValidPostClaimRequest(enrollmentId);
 
         when(enrollmentRepository.findById(enrollmentId))
                 .thenReturn(Optional.of(enrollment));
@@ -135,7 +134,7 @@ class ClaimServiceTest {
     @Test
     void shouldThrowWhenEnrollmentDoesNotExist() {
         UUID enrollmentId = UUID.randomUUID();
-        PostClaimRequest request = claimRequest(enrollmentId);
+        PostClaimRequest request = createValidPostClaimRequest(enrollmentId);
 
         when(enrollmentRepository.findById(enrollmentId))
                 .thenReturn(Optional.empty());
@@ -161,7 +160,7 @@ class ClaimServiceTest {
         UUID claimId = UUID.randomUUID();
         byte[] content = "receipt".getBytes();
         Receipt receipt = new Receipt(
-                claim(),
+                createValidClaim(),
                 "receipt.pdf",
                 "application/pdf",
                 (long) content.length,
@@ -208,9 +207,75 @@ class ClaimServiceTest {
     }
 
     @Test
+    void shouldApprovePendingClaim() {
+        UUID claimId = UUID.randomUUID();
+        Claim claim = createValidClaim();
+
+        when(claimRepository.findByIdOrThrow(claimId)).thenReturn(claim);
+
+        claimService.approveClaim(claimId);
+
+        assertThat(claim.getStatus()).isEqualTo(ClaimStatus.APPROVED);
+        verify(claimRepository).findByIdOrThrow(claimId);
+        verifyNoInteractions(
+                receiptRepository,
+                enrollmentRepository,
+                receiptStorage,
+                multipartFile
+        );
+    }
+
+    @Test
+    void shouldThrowWhenClaimToApproveDoesNotExist() {
+        UUID claimId = UUID.randomUUID();
+
+        when(claimRepository.findByIdOrThrow(claimId))
+                .thenThrow(new ResourceNotFoundException(Claim.class, claimId));
+
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> claimService.approveClaim(claimId)
+        );
+
+        verify(claimRepository).findByIdOrThrow(claimId);
+        verifyNoInteractions(
+                receiptRepository,
+                enrollmentRepository,
+                receiptStorage,
+                multipartFile
+        );
+    }
+
+    @Test
+    void shouldThrowWhenApprovingNonPendingClaim() {
+        UUID claimId = UUID.randomUUID();
+        Claim claim = createValidClaim();
+        claim.setStatus(ClaimStatus.REJECTED);
+
+        when(claimRepository.findByIdOrThrow(claimId)).thenReturn(claim);
+
+        ClaimNotPendingException exception = assertThrows(
+                ClaimNotPendingException.class,
+                () -> claimService.approveClaim(claimId)
+        );
+
+        assertThat(exception.getMessage())
+                .isEqualTo("Claim with id '" + claimId + "' cannot be approved because it is not pending. "
+                        + "Current status: REJECTED");
+        assertThat(claim.getStatus()).isEqualTo(ClaimStatus.REJECTED);
+        verify(claimRepository).findByIdOrThrow(claimId);
+        verifyNoInteractions(
+                receiptRepository,
+                enrollmentRepository,
+                receiptStorage,
+                multipartFile
+        );
+    }
+
+    @Test
     void shouldGetClaims() {
-        Claim claim = getClaim();
-        ClaimResponse listItem = getClaimResponse();
+        Claim claim = createValidClaimForListResponse();
+        ClaimResponse listItem = createValidClaimResponse();
         Pageable pageable = PageRequest.of(0, 20, Sort.by("createdAt").ascending());
         authenticateWith("view:claims");
         when(claimRepository.findAll(anyClaimSpecification(), same(pageable)))
@@ -243,8 +308,8 @@ class ClaimServiceTest {
 
     @Test
     void shouldSearchClaims() {
-        Claim claim = getClaim();
-        ClaimResponse listItem = getClaimResponse();
+        Claim claim = createValidClaimForListResponse();
+        ClaimResponse listItem = createValidClaimResponse();
         Pageable pageable = PageRequest.of(0, 20, Sort.by("serviceDate").descending());
         authenticateWith("view:claims");
         when(claimRepository.findAll(anyClaimSpecification(), same(pageable)))
@@ -272,96 +337,4 @@ class ClaimServiceTest {
         return any();
     }
 
-    private PostClaimRequest claimRequest(UUID enrollmentId) {
-        return new PostClaimRequest()
-                .enrollmentId(enrollmentId)
-                .serviceDate(LocalDate.of(2026, 7, 10))
-                .amount(BigDecimal.valueOf(123.45));
-    }
-
-    private Claim claim() {
-        return new Claim(
-                enrollment(UUID.randomUUID()),
-                LocalDate.of(2026, 7, 10),
-                BigDecimal.valueOf(123.45)
-        );
-    }
-
-    private Claim getClaim() {
-        Consumer employee = new Consumer();
-        employee.setFirstName("John");
-        employee.setLastName("Doe");
-        ReflectionTestUtils.setField(employee, "id", UUID.randomUUID());
-
-        InsurancePackage insurancePackage = new InsurancePackage(
-                "Premium Health Package",
-                Payroll.MONTHLY,
-                LocalDate.of(2026, 1, 1),
-                LocalDate.of(2026, 12, 31)
-        );
-
-        InsurancePlan plan = new InsurancePlan(
-                insurancePackage,
-                "Standard Health",
-                PlanType.HEALTH_INSURANCE,
-                new BigDecimal("250.00"),
-                new BigDecimal("500.00")
-        );
-        ReflectionTestUtils.setField(plan, "id", UUID.randomUUID());
-
-        Enrollment enrollment = new Enrollment(employee, plan);
-        ReflectionTestUtils.setField(enrollment, "id", UUID.randomUUID());
-
-        Claim claim = new Claim(enrollment, LocalDate.of(2026, 7, 15), new BigDecimal("285.50"));
-        ReflectionTestUtils.setField(claim, "claimNumber", "LT20260715001");
-        ReflectionTestUtils.setField(claim, "id", UUID.randomUUID());
-        return claim;
-    }
-
-    private ClaimResponse getClaimResponse() {
-        return new ClaimResponse()
-                .id(UUID.randomUUID())
-                .claimNumber("LT20260715001")
-                .consumerFullName("John Doe")
-                .serviceDate(LocalDate.of(2026, 7, 15))
-                .planName("Standard Health")
-                .amount(new BigDecimal("285.50"))
-                .status(com.cspot.insurahub.model.ClaimStatus.PENDING);
-    }
-
-    private Enrollment enrollment(UUID enrollmentId) {
-        Enrollment enrollment = new Enrollment(
-                consumer(UUID.randomUUID()),
-                insurancePlan(UUID.randomUUID())
-        );
-        ReflectionTestUtils.setField(enrollment, "id", enrollmentId);
-        return enrollment;
-    }
-
-    private Consumer consumer(UUID consumerId) {
-        Consumer consumer = new Consumer();
-        ReflectionTestUtils.setField(consumer, "id", consumerId);
-        return consumer;
-    }
-
-    private InsurancePlan insurancePlan(UUID planId) {
-        InsurancePlan plan = new InsurancePlan(
-                insurancePackage(),
-                "Plan",
-                PlanType.HEALTH_INSURANCE,
-                BigDecimal.valueOf(250),
-                BigDecimal.valueOf(500)
-        );
-        ReflectionTestUtils.setField(plan, "id", planId);
-        return plan;
-    }
-
-    private InsurancePackage insurancePackage() {
-        return new InsurancePackage(
-                "Package",
-                Payroll.MONTHLY,
-                LocalDate.now(),
-                LocalDate.now().plusMonths(1)
-        );
-    }
 }

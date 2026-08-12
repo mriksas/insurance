@@ -111,3 +111,25 @@ GetClaimsResponse:
         $ref: './schemas.yaml#/ClaimResponse'
     page:
       $ref: '../common/schemas.yaml#/PageResponse'
+
+UpdateClaimRequest:
+  type: object
+  required:
+    - serviceDate
+    - planId
+    - amount
+  properties:
+    serviceDate:
+      type: string
+      format: date
+      description: Date when the reimbursable service was provided.
+    planId:
+      type: string
+      format: uuid
+      description: Insurance plan associated with the claim's consumer enrollment.
+    amount:
+      type: number
+      minimum: 0
+      exclusiveMinimum: true
+      multipleOf: 0.01
+      description: Positive claim amount in EUR.

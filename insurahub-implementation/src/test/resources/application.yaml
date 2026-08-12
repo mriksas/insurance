@@ -16,6 +16,24 @@ spring:
       pageable:
         max-page-size: 100
 
+  mail:
+    host: mail-host
+    port: 67
+    username: username
+    password: password
+
+    properties:
+      mail:
+        smtp:
+          auth: true
+
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
+mail:
+  sender: sender
+
 # There are currently no plans to implement tests with a real Auth0 tenant involved, so fake data is used here.
 auth0:
   domain: auth0_domain

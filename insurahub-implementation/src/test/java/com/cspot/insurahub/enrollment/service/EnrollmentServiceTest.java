@@ -7,12 +7,9 @@ import com.cspot.insurahub.enrollment.entity.Enrollment;
 import com.cspot.insurahub.enrollment.entity.EnrollmentStatus;
 import com.cspot.insurahub.enrollment.mapper.EnrollmentMapper;
 import com.cspot.insurahub.enrollment.repository.EnrollmentRepository;
-import com.cspot.insurahub.insurancepackage.entity.InsurancePackage;
 import com.cspot.insurahub.insurancepackage.enumeration.InsurancePackageStatus;
 import com.cspot.insurahub.model.EnrollmentResponse;
-import com.cspot.insurahub.model.PlanType;
 import com.cspot.insurahub.model.PostResponse;
-import com.cspot.insurahub.payroll.Payroll;
 import com.cspot.insurahub.plan.entity.InsurancePlan;
 import com.cspot.insurahub.plan.repository.InsurancePlanRepository;
 import org.junit.jupiter.api.Test;
@@ -25,11 +22,11 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
+import static com.cspot.insurahub.consumer.testdata.ConsumerTestData.createValidConsumerWithId;
+import static com.cspot.insurahub.plan.testdata.PlanTestData.createValidInsurancePlanWithId;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -67,8 +64,8 @@ public class EnrollmentServiceTest {
     @Test
     void shouldEnrollConsumerOnPlan() {
         // GIVEN
-        Consumer consumer = consumer(CONSUMER_ID);
-        InsurancePlan plan = plan(PLAN_ID, InsurancePackageStatus.INITIALIZED);
+        Consumer consumer = createValidConsumerWithId(CONSUMER_ID);
+        InsurancePlan plan = createValidInsurancePlanWithId(PLAN_ID, InsurancePackageStatus.INITIALIZED);
         UUID enrollmentId = UUID.randomUUID();
 
         when(idpIdMappingService.getCurrentAuthenticatedConsumerId()).thenReturn(CONSUMER_ID);
@@ -120,31 +117,4 @@ public class EnrollmentServiceTest {
         verify(enrollmentMapper).toResponseList(any());
     }
 
-    private Consumer consumer(UUID id) {
-        Consumer consumer = new Consumer();
-        ReflectionTestUtils.setField(consumer, "id", id);
-        return consumer;
-    }
-
-    private InsurancePlan plan(UUID id, InsurancePackageStatus status) {
-        InsurancePackage insurancePackage = new InsurancePackage(
-                "Premium Health Package",
-                Payroll.MONTHLY,
-                LocalDate.of(2026, 7, 10),
-                LocalDate.of(2026, 8, 9)
-        );
-        insurancePackage.setStatus(status);
-
-        InsurancePlan plan = new InsurancePlan(
-                insurancePackage,
-                "Plan",
-                PlanType.HEALTH_INSURANCE,
-                BigDecimal.valueOf(250),
-                BigDecimal.valueOf(500)
-        );
-        ReflectionTestUtils.setField(plan, "id", id);
-        plan.setInsurancePackage(insurancePackage);
-
-        return plan;
-    }
 }

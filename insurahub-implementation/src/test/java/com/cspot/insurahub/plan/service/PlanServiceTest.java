@@ -10,8 +10,6 @@ import com.cspot.insurahub.insurancepackage.repository.InsurancePackageRepositor
 import com.cspot.insurahub.insurancepackage.validation.PackageValidator;
 import com.cspot.insurahub.model.PlanRequest;
 import com.cspot.insurahub.model.PlanResponse;
-import com.cspot.insurahub.model.PlanType;
-import com.cspot.insurahub.payroll.Payroll;
 import com.cspot.insurahub.plan.entity.InsurancePlan;
 import com.cspot.insurahub.plan.mapper.PlanMapper;
 import com.cspot.insurahub.plan.repository.InsurancePlanRepository;
@@ -26,11 +24,15 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
+import static com.cspot.insurahub.insurancepackage.testdata.InsurancePackageTestData.createValidInsurancePackage;
+import static com.cspot.insurahub.plan.testdata.PlanTestData.createValidDentalPlanRequest;
+import static com.cspot.insurahub.plan.testdata.PlanTestData.createValidInsurancePlan;
+import static com.cspot.insurahub.plan.testdata.PlanTestData.createValidPlanResponse;
+import static com.cspot.insurahub.plan.testdata.PlanTestData.createValidPlanRequest;
+import static com.cspot.insurahub.plan.testdata.PlanTestData.createValidUpdatedDentalPlanRequest;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -64,14 +66,9 @@ class PlanServiceTest {
     void shouldAddPlanToPackage() {
         UUID packageId = UUID.randomUUID();
         UUID planId = UUID.randomUUID();
-        InsurancePackage insurancePackage = createPackage();
-        PlanRequest request = createPlanRequest(
-                "Standard Health",
-                PlanType.HEALTH_INSURANCE,
-                250,
-                500
-        );
-        InsurancePlan plan = createPlan(insurancePackage);
+        InsurancePackage insurancePackage = createValidInsurancePackage();
+        PlanRequest request = createValidPlanRequest();
+        InsurancePlan plan = createValidInsurancePlan(insurancePackage);
         ReflectionTestUtils.setField(plan, "id", planId);
 
         when(packageRepository.findByIdOrThrow(packageId))
@@ -93,14 +90,9 @@ class PlanServiceTest {
     @Test
     void shouldRejectAddingPlanToInitializedPackage() {
         UUID packageId = UUID.randomUUID();
-        InsurancePackage insurancePackage = createPackage();
+        InsurancePackage insurancePackage = createValidInsurancePackage();
         insurancePackage.setStatus(InsurancePackageStatus.INITIALIZED);
-        PlanRequest request = createPlanRequest(
-                "Dental Basic",
-                PlanType.DENTAL_INSURANCE,
-                100,
-                300
-        );
+        PlanRequest request = createValidDentalPlanRequest();
         when(packageRepository.findByIdOrThrow(packageId))
                 .thenReturn(insurancePackage);
         doThrow(new PackageUpdateNotAllowedException(
@@ -122,12 +114,7 @@ class PlanServiceTest {
     @Test
     void shouldThrowOnAddPlanWhenPackageDoesNotExist() {
         UUID packageId = UUID.randomUUID();
-        PlanRequest request = createPlanRequest(
-                "Standard Health",
-                PlanType.HEALTH_INSURANCE,
-                250,
-                500
-        );
+        PlanRequest request = createValidPlanRequest();
 
         when(packageRepository.findByIdOrThrow(packageId))
                 .thenThrow(new PackageNotFoundException(packageId));
@@ -144,20 +131,12 @@ class PlanServiceTest {
     @Test
     void shouldReturnPlansOfPackage() {
         UUID packageId = UUID.randomUUID();
-        InsurancePackage insurancePackage = createPackage();
-        InsurancePlan plan = createPlan(insurancePackage);
+        InsurancePackage insurancePackage = createValidInsurancePackage();
+        InsurancePlan plan = createValidInsurancePlan(insurancePackage);
         insurancePackage.getPlans().add(plan);
         Pageable pageable = PageRequest.of(0, 10);
         Page<PlanResponse> expectedResponses = new PageImpl<>(
-                List.of(
-                        new PlanResponse(
-                                UUID.randomUUID(),
-                                "Standard Health",
-                                PlanType.HEALTH_INSURANCE,
-                                250,
-                                500
-                        )
-                ),
+                List.of(createValidPlanResponse()),
                 pageable,
                 1
         );
@@ -193,16 +172,10 @@ class PlanServiceTest {
 
     @Test
     void shouldReturnOnlyPlansFromInitializedPackages() {
-        InsurancePackage initializedPackage = createPackage();
+        InsurancePackage initializedPackage = createValidInsurancePackage();
         initializedPackage.setStatus(InsurancePackageStatus.INITIALIZED);
-        InsurancePlan plan = createPlan(initializedPackage);
-        PlanResponse expectedResponse = new PlanResponse(
-                UUID.randomUUID(),
-                "Standard Health",
-                PlanType.HEALTH_INSURANCE,
-                250,
-                500
-        );
+        InsurancePlan plan = createValidInsurancePlan(initializedPackage);
+        PlanResponse expectedResponse = createValidPlanResponse();
 
         when(planRepository.findByInsurancePackageStatus(InsurancePackageStatus.INITIALIZED))
                 .thenReturn(List.of(plan));
@@ -229,15 +202,10 @@ class PlanServiceTest {
     void shouldUpdatePlan() {
         UUID planId = UUID.randomUUID();
 
-        InsurancePackage insurancePackage = createPackage();
-        InsurancePlan plan = createPlan(insurancePackage);
+        InsurancePackage insurancePackage = createValidInsurancePackage();
+        InsurancePlan plan = createValidInsurancePlan(insurancePackage);
 
-        PlanRequest request = createPlanRequest(
-                "Updated Dental",
-                PlanType.DENTAL_INSURANCE,
-                300,
-                600
-        );
+        PlanRequest request = createValidUpdatedDentalPlanRequest();
 
         when(planRepository.findByIdOrThrow(planId))
                 .thenReturn(plan);
@@ -253,15 +221,10 @@ class PlanServiceTest {
     void shouldRejectUpdatePlanWhenPackageIsNotReadyForUpdate() {
         UUID planId = UUID.randomUUID();
 
-        InsurancePackage insurancePackage = createPackage();
-        InsurancePlan plan = createPlan(insurancePackage);
+        InsurancePackage insurancePackage = createValidInsurancePackage();
+        InsurancePlan plan = createValidInsurancePlan(insurancePackage);
 
-        PlanRequest request = createPlanRequest(
-                "Updated Dental",
-                PlanType.DENTAL_INSURANCE,
-                300,
-                600
-        );
+        PlanRequest request = createValidUpdatedDentalPlanRequest();
 
         when(planRepository.findByIdOrThrow(planId))
                 .thenReturn(plan);
@@ -281,12 +244,7 @@ class PlanServiceTest {
     void shouldThrowWhenUpdatingNonExistingPlan() {
         UUID planId = UUID.randomUUID();
 
-        PlanRequest request = createPlanRequest(
-                "Updated Dental",
-                PlanType.DENTAL_INSURANCE,
-                300,
-                600
-        );
+        PlanRequest request = createValidUpdatedDentalPlanRequest();
 
         when(planRepository.findByIdOrThrow(planId))
                 .thenThrow(new ResourceNotFoundException(InsurancePlan.class, planId));
@@ -306,8 +264,8 @@ class PlanServiceTest {
     void shouldDeletePlan() {
         UUID planId = UUID.randomUUID();
 
-        InsurancePackage insurancePackage = createPackage();
-        InsurancePlan plan = createPlan(insurancePackage);
+        InsurancePackage insurancePackage = createValidInsurancePackage();
+        InsurancePlan plan = createValidInsurancePlan(insurancePackage);
 
         when(planRepository.findByIdOrThrow(planId))
                 .thenReturn(plan);
@@ -326,9 +284,9 @@ class PlanServiceTest {
     void shouldRejectDeletingPlanWhenPackageIsInitialized() {
         UUID planId = UUID.randomUUID();
 
-        InsurancePackage insurancePackage = createPackage();
+        InsurancePackage insurancePackage = createValidInsurancePackage();
         insurancePackage.setStatus(InsurancePackageStatus.INITIALIZED);
-        InsurancePlan plan = createPlan(insurancePackage);
+        InsurancePlan plan = createValidInsurancePlan(insurancePackage);
 
         when(planRepository.findByIdOrThrow(planId))
                 .thenReturn(plan);
@@ -362,36 +320,4 @@ class PlanServiceTest {
                 .getRequiredAuthenticatedPrincipalName();
     }
 
-    private InsurancePackage createPackage() {
-        return new InsurancePackage(
-                "Premium Health Package",
-                Payroll.MONTHLY,
-                LocalDate.of(2026, 7, 10),
-                LocalDate.of(2026, 8, 9)
-        );
-    }
-
-    private PlanRequest createPlanRequest(
-            String name,
-            PlanType type,
-            int contribution,
-            int election
-    ) {
-        return new PlanRequest(
-                name,
-                type,
-                BigDecimal.valueOf(contribution),
-                BigDecimal.valueOf(election)
-        );
-    }
-
-    private InsurancePlan createPlan(InsurancePackage insurancePackage) {
-        return new InsurancePlan(
-                insurancePackage,
-                "Plan",
-                PlanType.HEALTH_INSURANCE,
-                BigDecimal.valueOf(250),
-                BigDecimal.valueOf(500)
-        );
-    }
 }

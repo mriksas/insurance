@@ -35,6 +35,27 @@ spring:
       max-file-size: 10MB
       max-request-size: 10MB
 
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: ${MAIL_STARTTLS_ENABLED:false}
+            required: ${MAIL_STARTTLS_REQUIRED:false}
+
+          connectiontimeout: ${MAIL_CONNECTION_TIMEOUT:5000}
+          timeout: ${MAIL_TIMEOUT:5000}
+          writetimeout: ${MAIL_WRITE_TIMEOUT:5000}
+
+mail:
+  sender: ${MAIL_SENDER}
+
 server:
   servlet:
     context-path: /api/v1

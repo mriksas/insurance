@@ -10,7 +10,6 @@ import com.cspot.insurahub.insurancepackage.repository.InsurancePackageRepositor
 import com.cspot.insurahub.insurancepackage.validation.PackageValidator;
 import com.cspot.insurahub.model.PackageRequest;
 import com.cspot.insurahub.model.PackageResponse;
-import com.cspot.insurahub.model.PlanType;
 import com.cspot.insurahub.payroll.Payroll;
 import com.cspot.insurahub.plan.entity.InsurancePlan;
 import org.junit.jupiter.api.Test;
@@ -23,13 +22,17 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.test.util.ReflectionTestUtils;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
+import static com.cspot.insurahub.insurancepackage.testdata.InsurancePackageTestData.createValidInsurancePackage;
+import static com.cspot.insurahub.insurancepackage.testdata.InsurancePackageTestData.createValidInsurancePackageWithId;
+import static com.cspot.insurahub.insurancepackage.testdata.InsurancePackageTestData.createValidPackageRequest;
+import static com.cspot.insurahub.insurancepackage.testdata.InsurancePackageTestData.createValidPackageResponse;
+import static com.cspot.insurahub.insurancepackage.testdata.InsurancePackageTestData.createValidUpdatedPackageRequest;
+import static com.cspot.insurahub.plan.testdata.PlanTestData.createValidStandardHealthInsurancePlan;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -62,19 +65,8 @@ class PackageServiceTest {
     @Test
     void shouldGetPackagesFilteredByName() {
         Pageable pageable = PageRequest.of(0, 20);
-        InsurancePackage insurancePackage = new InsurancePackage(
-                "Premium Health Package",
-                Payroll.MONTHLY,
-                LocalDate.of(2026, 7, 10),
-                LocalDate.of(2026, 8, 9)
-        );
-        PackageResponse response = new PackageResponse(
-                UUID.randomUUID(),
-                "Premium Health Package",
-                Payroll.MONTHLY,
-                LocalDate.of(2026, 7, 10),
-                LocalDate.of(2026, 8, 9)
-        );
+        InsurancePackage insurancePackage = createValidInsurancePackage();
+        PackageResponse response = createValidPackageResponse();
 
         when(insurancePackageRepository.findAll(
                 anyPackageSpecification(),
@@ -94,19 +86,8 @@ class PackageServiceTest {
     @Test
     void shouldGetAllPackagesWhenNameIsBlank() {
         Pageable pageable = PageRequest.of(0, 20);
-        InsurancePackage insurancePackage = new InsurancePackage(
-                "Premium Health Package",
-                Payroll.MONTHLY,
-                LocalDate.of(2026, 7, 10),
-                LocalDate.of(2026, 8, 9)
-        );
-        PackageResponse response = new PackageResponse(
-                UUID.randomUUID(),
-                "Premium Health Package",
-                Payroll.MONTHLY,
-                LocalDate.of(2026, 7, 10),
-                LocalDate.of(2026, 8, 9)
-        );
+        InsurancePackage insurancePackage = createValidInsurancePackage();
+        PackageResponse response = createValidPackageResponse();
 
         when(insurancePackageRepository.findAll(
                 anyPackageSpecification(),
@@ -125,30 +106,9 @@ class PackageServiceTest {
 
     @Test
     void shouldCreatePackage() {
-        LocalDate startDate = LocalDate.of(2026, 7, 10);
-        LocalDate endDate = LocalDate.of(2026, 8, 9);
-
-        PackageRequest request = new PackageRequest(
-                "Premium Health Package",
-                Payroll.MONTHLY,
-                startDate,
-                endDate
-        );
-
-        InsurancePackage insurancePackage = new InsurancePackage(
-                "Premium Health Package",
-                Payroll.MONTHLY,
-                startDate,
-                endDate
-        );
-
         UUID packageId = UUID.randomUUID();
-
-        ReflectionTestUtils.setField(
-                insurancePackage,
-                "id",
-                packageId
-        );
+        PackageRequest request = createValidPackageRequest();
+        InsurancePackage insurancePackage = createValidInsurancePackageWithId(packageId);
 
         when(packageMapper.initializeFromCreateRequest(request))
                 .thenReturn(insurancePackage);
@@ -170,21 +130,13 @@ class PackageServiceTest {
         UUID packageId = UUID.randomUUID();
         LocalDate startDate = LocalDate.of(2026, 7, 10);
         LocalDate endDate = LocalDate.of(2026, 8, 10);
-
-        PackageRequest request = new PackageRequest(
-                "Updated Package",
-                Payroll.MONTHLY,
-                startDate,
-                endDate
-        );
-
+        PackageRequest request = createValidUpdatedPackageRequest(startDate, endDate);
         InsurancePackage insurancePackage = new InsurancePackage(
                 "Original Package",
                 Payroll.WEEKLY,
                 LocalDate.of(2026, 7, 10),
                 LocalDate.of(2026, 7, 17)
         );
-        ReflectionTestUtils.setField(insurancePackage, "id", packageId);
 
         when(insurancePackageRepository.findByIdOrThrow(packageId))
                 .thenReturn(insurancePackage);
@@ -210,14 +162,9 @@ class PackageServiceTest {
     @Test
     void shouldThrowOnUpdateWhenPackageNotFound() {
         UUID packageId = UUID.randomUUID();
-        LocalDate startDate = LocalDate.of(2026, 7, 10);
-        LocalDate endDate = LocalDate.of(2026, 8, 10);
-
-        PackageRequest request = new PackageRequest(
-                "Updated Package",
-                Payroll.MONTHLY,
-                startDate,
-                endDate
+        PackageRequest request = createValidUpdatedPackageRequest(
+                LocalDate.of(2026, 7, 10),
+                LocalDate.of(2026, 8, 10)
         );
 
         when(insurancePackageRepository.findByIdOrThrow(packageId))
@@ -239,12 +186,7 @@ class PackageServiceTest {
     @Test
     void shouldInitializePackage() {
         UUID packageId = UUID.randomUUID();
-        InsurancePackage insurancePackage = new InsurancePackage(
-                "Premium Health Package",
-                Payroll.MONTHLY,
-                LocalDate.of(2026, 7, 10),
-                LocalDate.of(2026, 8, 9)
-        );
+        InsurancePackage insurancePackage = createValidInsurancePackage();
         when(insurancePackageRepository.findByIdOrThrow(packageId))
                 .thenReturn(insurancePackage);
 
@@ -273,19 +215,8 @@ class PackageServiceTest {
     @Test
     void shouldRemovePackageAndConnectedPlans() {
         UUID packageId = UUID.randomUUID();
-        InsurancePackage insurancePackage = new InsurancePackage(
-                "Premium Health Package",
-                Payroll.MONTHLY,
-                LocalDate.of(2026, 7, 10),
-                LocalDate.of(2026, 8, 9)
-        );
-        InsurancePlan plan = new InsurancePlan(
-                insurancePackage,
-                "Standard Health",
-                PlanType.HEALTH_INSURANCE,
-                BigDecimal.valueOf(250),
-                BigDecimal.valueOf(500)
-        );
+        InsurancePackage insurancePackage = createValidInsurancePackage();
+        InsurancePlan plan = createValidStandardHealthInsurancePlan(insurancePackage);
         insurancePackage.getPlans().add(plan);
 
         when(insurancePackageRepository.findByIdOrThrow(packageId))

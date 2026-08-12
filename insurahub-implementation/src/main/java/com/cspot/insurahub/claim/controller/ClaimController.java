@@ -5,6 +5,7 @@ import com.cspot.insurahub.claim.service.ClaimService;
 import com.cspot.insurahub.model.ClaimResponse;
 import com.cspot.insurahub.model.PostClaimRequest;
 import com.cspot.insurahub.model.PostResponse;
+import com.cspot.insurahub.model.UpdateClaimRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
@@ -45,5 +46,19 @@ public class ClaimController implements ClaimsApi {
             @RequestPart("receiptFile") MultipartFile receiptFile
     ) {
         return claimService.createClaim(postClaimRequest, receiptFile);
+    }
+
+    @Override
+    @PreAuthorize("hasAuthority('update:claims')")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void approveClaim(UUID claimId) {
+        claimService.approveClaim(claimId);
+    }
+
+    @Override
+    @PreAuthorize("hasAuthority('update:claims')")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void putClaim(UUID claimId, @Valid UpdateClaimRequest updateClaimRequest) {
+        claimService.updateClaim(claimId, updateClaimRequest);
     }
 }

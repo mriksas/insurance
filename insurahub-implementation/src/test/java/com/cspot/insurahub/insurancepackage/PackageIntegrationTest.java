@@ -1,14 +1,11 @@
 package com.cspot.insurahub.insurancepackage;
 
 import com.cspot.insurahub.BaseIntegrationTest;
-import com.cspot.insurahub.consumer.entity.Consumer;
 import com.cspot.insurahub.consumer.repository.ConsumerRepository;
-import com.cspot.insurahub.enrollment.entity.Enrollment;
 import com.cspot.insurahub.enrollment.repository.EnrollmentRepository;
 import com.cspot.insurahub.insurancepackage.entity.InsurancePackage;
 import com.cspot.insurahub.insurancepackage.enumeration.InsurancePackageStatus;
 import com.cspot.insurahub.insurancepackage.repository.InsurancePackageRepository;
-import com.cspot.insurahub.model.PlanType;
 import com.cspot.insurahub.payroll.Payroll;
 import com.cspot.insurahub.plan.entity.InsurancePlan;
 import com.cspot.insurahub.plan.repository.InsurancePlanRepository;
@@ -27,7 +24,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
-import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Collection;
@@ -40,6 +36,11 @@ import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.not;
+import static com.cspot.insurahub.consumer.testdata.ConsumerTestData.createUniqueValidConsumer;
+import static com.cspot.insurahub.enrollment.testdata.EnrollmentTestData.createValidEnrollment;
+import static com.cspot.insurahub.insurancepackage.testdata.InsurancePackageTestData.createValidPackageRequestBody;
+import static com.cspot.insurahub.plan.testdata.PlanTestData.createValidDentalBasicInsurancePlan;
+import static com.cspot.insurahub.plan.testdata.PlanTestData.createValidStandardHealthInsurancePlan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -224,7 +225,7 @@ class PackageIntegrationTest extends BaseIntegrationTest {
 
         mockMvc.perform(post(PACKAGES_ENDPOINT)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(createRequestBody(
+                        .content(createValidPackageRequestBody(
                                 PACKAGE_NAME,
                                 "MONTHLY",
                                 startDate,
@@ -246,7 +247,7 @@ class PackageIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(post(PACKAGES_ENDPOINT)
                         .with(jwtWithoutPermissions())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(createRequestBody(
+                        .content(createValidPackageRequestBody(
                                 PACKAGE_NAME,
                                 "MONTHLY",
                                 startDate,
@@ -274,7 +275,7 @@ class PackageIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(put(PACKAGES_ENDPOINT + "/" + packageId)
                         .with(jwtWithPermissions("update:packages"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(createRequestBody(
+                        .content(createValidPackageRequestBody(
                                 "Updated Package",
                                 "MONTHLY",
                                 updatedStartDate,
@@ -304,7 +305,7 @@ class PackageIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(put(PACKAGES_ENDPOINT + "/" + packageId)
                         .with(jwtWithoutPermissions())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(createRequestBody(
+                        .content(createValidPackageRequestBody(
                                 "Updated Package",
                                 "MONTHLY",
                                 LocalDate.now(clock).plusDays(2),
@@ -326,7 +327,7 @@ class PackageIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(put(PACKAGES_ENDPOINT + "/" + missingPackageId)
                         .with(jwtWithPermissions("update:packages"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(createRequestBody(
+                        .content(createValidPackageRequestBody(
                                 "Updated Package",
                                 "MONTHLY",
                                 startDate,
@@ -353,7 +354,7 @@ class PackageIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(put(PACKAGES_ENDPOINT + "/" + packageId)
                         .with(jwtWithPermissions("update:packages"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(createRequestBody(
+                        .content(createValidPackageRequestBody(
                                 "Updated Package",
                                 "MONTHLY",
                                 startDate,
@@ -372,7 +373,7 @@ class PackageIntegrationTest extends BaseIntegrationTest {
             LocalDate endDate
     ) throws Exception {
         assertPackageRejected(
-                createRequestBody(
+                createValidPackageRequestBody(
                         PACKAGE_NAME,
                         payroll,
                         startDate,
@@ -406,7 +407,7 @@ class PackageIntegrationTest extends BaseIntegrationTest {
         LocalDate endDate = startDate.plusMonths(1);
 
         assertPackageRejected(
-                createRequestBody(
+                createValidPackageRequestBody(
                         "   ",
                         "MONTHLY",
                         startDate,
@@ -440,7 +441,7 @@ class PackageIntegrationTest extends BaseIntegrationTest {
         LocalDate endDate = startDate.plusMonths(1);
 
         assertPackageRejected(
-                createRequestBody(
+                createValidPackageRequestBody(
                         PACKAGE_NAME,
                         "   ",
                         startDate,
@@ -457,7 +458,7 @@ class PackageIntegrationTest extends BaseIntegrationTest {
         LocalDate endDate = startDate.plusMonths(1);
 
         assertPackageRejected(
-                createRequestBody(
+                createValidPackageRequestBody(
                         PACKAGE_NAME,
                         "DAILY",
                         startDate,
@@ -659,8 +660,8 @@ class PackageIntegrationTest extends BaseIntegrationTest {
     void shouldRemovePackageAndConnectedPlans() throws Exception {
         InsurancePackage insurancePackage = savePackage();
         List<InsurancePlan> plans = planRepository.saveAll(List.of(
-                createPlan(insurancePackage, "Standard Health"),
-                createPlan(insurancePackage, "Dental Basic")
+                createValidStandardHealthInsurancePlan(insurancePackage),
+                createValidDentalBasicInsurancePlan(insurancePackage)
         ));
 
         mockMvc.perform(delete(PACKAGES_ENDPOINT + "/" + insurancePackage.getId())
@@ -694,8 +695,8 @@ class PackageIntegrationTest extends BaseIntegrationTest {
     @Test
     void shouldRejectPackageRemovalWhenAnyPlanHasEnrollment() throws Exception {
         InsurancePackage insurancePackage = savePackage();
-        InsurancePlan plan = planRepository.save(createPlan(insurancePackage, "Standard Health"));
-        enrollmentRepository.save(createEnrollment(plan));
+        InsurancePlan plan = planRepository.save(createValidStandardHealthInsurancePlan(insurancePackage));
+        enrollmentRepository.save(createValidEnrollment(consumerRepository.save(createUniqueValidConsumer()), plan));
 
         mockMvc.perform(delete(PACKAGES_ENDPOINT + "/" + insurancePackage.getId())
                         .with(jwtWithPermissions("delete:packages")))
@@ -721,7 +722,7 @@ class PackageIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(post(PACKAGES_ENDPOINT)
                         .with(jwtWithPermissions("create:packages"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(createRequestBody(
+                        .content(createValidPackageRequestBody(
                                 name,
                                 payroll,
                                 startDate,
@@ -757,22 +758,6 @@ class PackageIntegrationTest extends BaseIntegrationTest {
         assertEquals(packagesBeforeRequest, repository.count());
     }
 
-    private String createRequestBody(
-            String name,
-            String payroll,
-            LocalDate startDate,
-            LocalDate endDate
-    ) {
-        return """
-                {
-                  "name": "%s",
-                  "payroll": "%s",
-                  "startDate": "%s",
-                  "endDate": "%s"
-                }
-                """.formatted(name, payroll, startDate, endDate);
-    }
-
     private InsurancePackage savePackage() {
         LocalDate startDate = LocalDate.now(clock).plusDays(1);
 
@@ -782,37 +767,6 @@ class PackageIntegrationTest extends BaseIntegrationTest {
                 startDate,
                 startDate.plusMonths(1)
         ));
-    }
-
-    private InsurancePlan createPlan(InsurancePackage insurancePackage, String name) {
-        return new InsurancePlan(
-                insurancePackage,
-                name,
-                PlanType.HEALTH_INSURANCE,
-                BigDecimal.valueOf(250),
-                BigDecimal.valueOf(500)
-        );
-    }
-
-    private Enrollment createEnrollment(InsurancePlan plan) {
-        return new Enrollment(
-                consumerRepository.save(createConsumer()),
-                plan
-        );
-    }
-
-    private Consumer createConsumer() {
-        Consumer consumer = new Consumer();
-        String uniqueValue = UUID.randomUUID().toString();
-        consumer.setIdpId("auth0|" + uniqueValue);
-        consumer.setEmail(uniqueValue + "@email.org");
-        consumer.setFirstName("First Name");
-        consumer.setLastName("Last Name");
-        consumer.setPersonalId(uniqueValue.substring(0, 11));
-        consumer.setDateOfBirth(LocalDate.of(2026, 7, 7));
-        consumer.setAddress("Address");
-        consumer.setCity("City");
-        return consumer;
     }
 
     private void assertSoftDeleted(String tableName, UUID id) {

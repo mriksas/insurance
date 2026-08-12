@@ -5,6 +5,9 @@ import com.cspot.insurahub.consumer.entity.Consumer;
 import com.cspot.insurahub.consumer.enumeration.IdpRole;
 import com.cspot.insurahub.consumer.identity.IdentityProviderClient;
 import com.cspot.insurahub.consumer.repository.ConsumerRepository;
+import com.cspot.insurahub.model.PostConsumerRequest;
+import com.cspot.insurahub.model.PostResponse;
+import com.cspot.insurahub.model.PutConsumerRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -19,22 +22,21 @@ import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.annotation.Transactional;
-import com.cspot.insurahub.model.PostConsumerRequest;
-import com.cspot.insurahub.model.PostResponse;
-import com.cspot.insurahub.model.PutConsumerRequest;
 import tools.jackson.databind.json.JsonMapper;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import static com.cspot.insurahub.consumer.testdata.ConsumerTestData.createValidPostConsumerRequest;
+import static com.cspot.insurahub.consumer.testdata.ConsumerTestData.createValidPutConsumerRequest;
+import static com.cspot.insurahub.consumer.testdata.ConsumerTestData.createValidUpdatedPutConsumerRequest;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -68,7 +70,7 @@ class ConsumerControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void shouldCreateConsumer() throws Exception {
-        PostConsumerRequest createRequest = getConsumerCreateRequest();
+        PostConsumerRequest createRequest = createValidPostConsumerRequest();
         Mockito.when(identityProviderClient.registerUser(createRequest.getEmail(), createRequest.getPassword()))
                 .thenReturn("auth0|consumer-123");
 
@@ -103,7 +105,7 @@ class ConsumerControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void shouldRejectConsumerCreationWithoutAuthority() throws Exception {
-        PostConsumerRequest createRequest = getConsumerCreateRequest();
+        PostConsumerRequest createRequest = createValidPostConsumerRequest();
 
         mockMvc.perform(post("/consumers")
                         .with(jwt())
@@ -294,7 +296,7 @@ class ConsumerControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void shouldUpdateConsumer() throws Exception {
-        PostConsumerRequest createRequest = getConsumerCreateRequest();
+        PostConsumerRequest createRequest = createValidPostConsumerRequest();
         Mockito.when(identityProviderClient.registerUser(createRequest.getEmail(), createRequest.getPassword()))
                 .thenReturn("auth0|consumer-123");
 
@@ -308,13 +310,7 @@ class ConsumerControllerIntegrationTest extends BaseIntegrationTest {
                 .getContentAsString();
         UUID consumerId = jsonMapper.readValue(responseJson, PostResponse.class).getId();
 
-        PutConsumerRequest updateRequest = new PutConsumerRequest()
-                .firstName("Updated First Name")
-                .lastName("Updated Last Name")
-                .personalId("12345678910")
-                .dateOfBirth(LocalDate.of(2026, 7, 7))
-                .address("Updated Address")
-                .city("Updated City");
+        PutConsumerRequest updateRequest = createValidUpdatedPutConsumerRequest();
 
         mockMvc.perform(put("/consumers/{id}", consumerId)
                         .with(jwtWithPermission("update:consumers"))
@@ -341,7 +337,7 @@ class ConsumerControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void shouldRejectConsumerUpdateWhenConsumerNotFound() throws Exception {
-        PutConsumerRequest updateRequest = getConsumerUpdateRequest();
+        PutConsumerRequest updateRequest = createValidPutConsumerRequest();
 
         mockMvc.perform(put("/consumers/{id}", UUID.randomUUID())
                         .with(jwtWithPermission("update:consumers"))
@@ -353,7 +349,7 @@ class ConsumerControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void shouldRejectConsumerUpdateWithoutAuthority() throws Exception {
-        PutConsumerRequest updateRequest = getConsumerUpdateRequest();
+        PutConsumerRequest updateRequest = createValidPutConsumerRequest();
 
         mockMvc.perform(put("/consumers/{id}", UUID.randomUUID())
                         .with(jwt())
@@ -362,45 +358,10 @@ class ConsumerControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
-    private PutConsumerRequest getConsumerUpdateRequest() {
-        return new PutConsumerRequest()
-                .firstName("First Name")
-                .lastName("Last Name")
-                .personalId("12345678910")
-                .dateOfBirth(LocalDate.of(2026, 7, 7))
-                .address("Address")
-                .city("City");
-    }
-
-    private PostConsumerRequest getConsumerCreateRequest() {
-        return new PostConsumerRequest()
-                .email("email@email.org")
-                .password("SecurePassword123")
-                .firstName("First Name")
-                .lastName("Last Name")
-                .personalId("12345678910")
-                .dateOfBirth(LocalDate.of(2026, 7, 7))
-                .address("Address")
-                .city("City");
-    }
-
     private RequestPostProcessor jwtWithPermission(String permission) {
         return jwt()
                 .jwt(jwt -> jwt.claim("permissions", List.of(permission)))
                 .authorities(jwt -> Objects.requireNonNull(jwtAuthenticationConverter.convert(jwt)).getAuthorities());
-    }
-
-    private Consumer getConsumer() {
-        Consumer consumer = new Consumer();
-        consumer.setIdpId("auth0|consumer-123");
-        consumer.setEmail("email@email.org");
-        consumer.setFirstName("First Name");
-        consumer.setLastName("Last Name");
-        consumer.setPersonalId("12345678910");
-        consumer.setDateOfBirth(LocalDate.of(2026, 7, 7));
-        consumer.setAddress("Address");
-        consumer.setCity("City");
-        return consumer;
     }
 
     @TestConfiguration
@@ -415,7 +376,7 @@ class ConsumerControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void shouldDeleteConsumer() throws Exception {
         // 1. Create a consumer first
-        PostConsumerRequest createRequest = getConsumerCreateRequest();
+        PostConsumerRequest createRequest = createValidPostConsumerRequest();
         Mockito.when(identityProviderClient.registerUser(createRequest.getEmail(), createRequest.getPassword()))
                 .thenReturn("auth0|consumer-123");
 

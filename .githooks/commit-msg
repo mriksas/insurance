@@ -1,0 +1,19 @@
+#!/bin/sh
+set -e
+
+COMMIT_MSG_FILE="$1"
+COMMIT_TITLE=$(sed -n '1p' "$COMMIT_MSG_FILE")
+
+case "$COMMIT_TITLE" in
+  Merge\ *|Revert\ *|fixup!\ *|squash!\ *)
+    exit 0
+    ;;
+esac
+
+if ! printf '%s' "$COMMIT_TITLE" | grep -Eq '^SCRUM-[0-9]+: [A-Z][a-z]+ .+'; then
+  echo "Invalid commit message."
+  echo "Expected format: SCRUM-123: Verb short description"
+  echo "Example: SCRUM-38: Add package search"
+  echo "Current: $COMMIT_TITLE"
+  exit 1
+fi

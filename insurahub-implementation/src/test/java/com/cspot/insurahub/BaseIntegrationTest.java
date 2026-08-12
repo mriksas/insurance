@@ -1,5 +1,6 @@
 package com.cspot.insurahub;
 
+import org.mockito.Mockito;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
@@ -10,6 +11,8 @@ import org.springframework.context.annotation.Primary;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import com.cspot.insurahub.notification.EmailDistributor;
+
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -17,7 +20,7 @@ import java.time.ZoneId;
 @Testcontainers
 @AutoConfigureMockMvc
 @SpringBootTest
-@Import(BaseIntegrationTest.FixedClockTestConfig.class)
+@Import({BaseIntegrationTest.FixedClockTestConfig.class, BaseIntegrationTest.MockedEmailDistributorTestConfig.class})
 public abstract class BaseIntegrationTest {
 
     @ServiceConnection
@@ -34,6 +37,16 @@ public abstract class BaseIntegrationTest {
                     Instant.parse("2026-07-09T00:00:00Z"),
                     ZoneId.systemDefault()
             );
+        }
+    }
+
+    @TestConfiguration
+    static class MockedEmailDistributorTestConfig {
+
+        @Bean
+        @Primary
+        public EmailDistributor mockedEmailDistributor() {
+            return Mockito.mock(EmailDistributor.class);
         }
     }
 }
