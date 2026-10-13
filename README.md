@@ -7,7 +7,7 @@
 
 > Team project forked from [`cs-pot/insurance`](https://github.com/cs-pot/insurance). The authorship list is preserved below.
 
-InsuraHub is a backend REST API for managing insurance packages, plans, consumers, enrollments, and claims.
+InsuraHub is my internship project which I built in Coherent Solutions together with my team (repo was under github of our mentor so I forked it). It's a backend REST API for managing insurance packages, plans, consumers, enrollments, and claims.
 
 The project is built with Java 21 and Spring Boot. It uses an OpenAPI-first approach: API contracts are defined in the `insurahub-api` module, and Java API interfaces/models are generated during the Gradle build.
 
