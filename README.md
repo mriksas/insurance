@@ -1,8 +1,25 @@
 # InsuraHub
 
+![Java](https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-Backend-6DB33F?logo=springboot&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-4169E1?logo=postgresql&logoColor=white)
+![OpenAPI](https://img.shields.io/badge/OpenAPI-Contract%20First-6BA539?logo=openapiinitiative&logoColor=white)
+
+> Team project forked from [`cs-pot/insurance`](https://github.com/cs-pot/insurance). The authorship list is preserved below.
+
 InsuraHub is a backend REST API for managing insurance packages, plans, consumers, enrollments, and claims.
 
 The project is built with Java 21 and Spring Boot. It uses an OpenAPI-first approach: API contracts are defined in the `insurahub-api` module, and Java API interfaces/models are generated during the Gradle build.
+
+```mermaid
+flowchart LR
+    A[OpenAPI contracts] --> B[Generated API interfaces and DTOs]
+    B --> C[Spring Boot implementation]
+    C --> D[Domain and validation]
+    C --> E[(PostgreSQL)]
+    F[Auth0 JWT] --> C
+    G[Liquibase] --> E
+```
 
 ## Features
 
